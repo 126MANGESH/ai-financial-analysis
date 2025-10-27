@@ -1,0 +1,10 @@
+streamlit
+groq
+python-dotenv
+pandas
+matplotlib
+streamlit
+groq
+python-dotenv
+pandas
+matplotlib
