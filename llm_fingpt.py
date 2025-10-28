@@ -5,247 +5,238 @@ import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import re
-import io  # For handling file content in memory
-import json  # For safe JSON parsing
+import io
+import json
 
-# For PDF text extraction (install via: pip install PyPDF2)
+# For PDF text extraction
 try:
     import PyPDF2
 except ImportError:
-    st.error("❌ PyPDF2 is required for PDF processing. Install it with: `pip install PyPDF2`")
+    st.error("❌ PyPDF2 is required. Install with: pip install PyPDF2")
     st.stop()
 
-# Load environment variables
+# Load environment
 load_dotenv()
 api_key = os.getenv("GROQ_API_KEY")
-
 if not api_key:
-    st.error("❌ GROQ_API_KEY not found. Please add it in your .env file.")
+    st.error("❌ GROQ_API_KEY not found in .env")
     st.stop()
 
-# Initialize Groq client
 client = Groq(api_key=api_key)
-
-# --- PAGE CONFIG ---
 st.set_page_config(page_title="AI Financial Analysis", layout="wide")
-
-# --- HEADER ---
 st.title("📈 AI Financial Analysis Dashboard")
 
-# --- USER INPUT ---
-col1, col2 = st.columns([2, 1])
+# ---------------- SMART PROMPT LIBRARY ---------------- #
 
+BUSINESS_MODEL_PROMPT = """
+Explain the business model of {company_name}.
+Describe its main revenue streams, customer segments, value proposition, and cost structure.
+Summarize in 4-5 bullet points.
+If available, use insights from the company’s financial statements or annual report.
+"""
+
+MANAGEMENT_COMMENTARY_PROMPT = """
+Summarize the recent management commentary for {company_name}.
+Highlight key themes such as business outlook, challenges, opportunities, and strategic decisions.
+If available, use management quotes from quarterly or annual reports.
+"""
+
+RED_FLAGS_PROMPT = """
+Identify and explain potential red flags for {company_name}.
+Include points such as:
+- Governance or regulatory issues
+- Declining margins or rising debt
+- Frequent leadership changes
+- Auditor resignations or lawsuits
+Provide a short summary table if possible.
+"""
+
+KEY_PRODUCTS_PROMPT = """
+Create a table of key products or services offered by {company_name}.
+Include columns:
+Product/Service | Segment | Revenue Contribution | Key Market | Growth Trend
+"""
+
+EVOLUTION_PROMPT = """
+Describe the evolution of {company_name} over the last 3 years.
+Cover:
+- Business expansion or restructuring
+- Financial performance trends
+- New product launches
+- Mergers, acquisitions, or partnerships
+Present in a concise 3-year timeline format.
+"""
+
+STOCK_PERFORMANCE_PROMPT = """
+Based on recent financial data and management commentary, analyze how the stock of {company_name} is expected to perform in the next 6–12 months.
+Include technical and fundamental insights where possible.
+Summarize risks and catalysts.
+"""
+
+GROWTH_OUTLOOK_PROMPT = """
+Project the growth outlook for {company_name} over the next 3 years.
+Include potential drivers (sector growth, policy, expansion) and risks.
+Summarize with key metrics like Revenue CAGR, EPS growth, and ROE trends.
+"""
+
+GUIDANCE_VS_DELIVERY_PROMPT = """
+Analyze management’s past guidance vs actual delivery for {company_name}.
+Create a table with columns:
+Year | Guidance Given | Actual Results | Deviation (%) | Remarks
+Highlight whether management has been consistent or overpromising.
+"""
+
+DOC_ANALYSIS_PROMPT = """
+Using the 141 available documents of {company_name}, extract key insights related to:
+"{user_query}"
+Summarize with supporting numbers and short bullet points.
+"""
+
+def get_financial_prompt(query, company_name):
+    """Auto-selects best prompt based on user query"""
+    query = query.lower()
+    if "business model" in query:
+        return BUSINESS_MODEL_PROMPT.format(company_name=company_name)
+    elif "management" in query and "commentary" in query:
+        return MANAGEMENT_COMMENTARY_PROMPT.format(company_name=company_name)
+    elif "red flag" in query:
+        return RED_FLAGS_PROMPT.format(company_name=company_name)
+    elif "key product" in query or "service" in query:
+        return KEY_PRODUCTS_PROMPT.format(company_name=company_name)
+    elif "evolution" in query:
+        return EVOLUTION_PROMPT.format(company_name=company_name)
+    elif "stock" in query or "performance" in query:
+        return STOCK_PERFORMANCE_PROMPT.format(company_name=company_name)
+    elif "growth" in query or "outlook" in query:
+        return GROWTH_OUTLOOK_PROMPT.format(company_name=company_name)
+    elif "guidance" in query:
+        return GUIDANCE_VS_DELIVERY_PROMPT.format(company_name=company_name)
+    else:
+        return DOC_ANALYSIS_PROMPT.format(company_name=company_name, user_query=query)
+
+# ---------------- MAIN INPUT SECTION ---------------- #
+
+col1, col2 = st.columns([2, 1])
 with col1:
-    company_name = st.text_input(
-        "🏢 Company Name", placeholder="Enter company name (e.g. Reliance, HDFC, Tata Motors)"
-    )
+    company_name = st.text_input("🏢 Company Name", placeholder="Enter company name (e.g. Reliance, HDFC, Tata Motors)")
 with col2:
     file_upload = st.file_uploader("📄 Upload Financial Report (optional)", type=["pdf", "xbrl"])
 
-analyze_button = st.button("🚀 Analyze Financials")
+query_input = st.text_input("💬 Ask SageApla (e.g. What are the red flags in HDFC Bank?)")
+analyze_button = st.button("🚀 SageAlpha AI")
 
-# --- ANALYSIS LOGIC ---
+# ---------------- ANALYSIS LOGIC ---------------- #
+
 if analyze_button:
     if not company_name and not file_upload:
-        st.warning("⚠️ Please enter a company name or upload a financial file.")
-    else:
-        with st.spinner("Analyzing financial data..."):
-            report_text = ""
-            if company_name:
-                # ✅ Analyze company name
-                prompt = (
-                    f"Generate a detailed financial analysis report of {company_name}, "
-                    f"including market capitalization, annual performance, and latest quarterly results. "
-                    f"Include numerical data in tabular form if possible. Structure the output with sections like 'Key Metrics' and use markdown for tables."
-                )
+        st.warning("⚠️ Enter a company name or upload a file.")
+    elif query_input:
+        with st.spinner("🔍 Generating SageAlpha finance response..."):
+            prompt = get_financial_prompt(query_input, company_name or "the company")
+            completion = client.chat.completions.create(
+                model="llama-3.1-8b-instant",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                max_tokens=900
+            )
+            report_text = completion.choices[0].message.content
+            st.session_state["report_text"] = report_text
+            st.success("✅ SageAlpha Finance Analysis Completed!")
+            st.markdown(report_text)
+
+    elif file_upload:
+        with st.spinner("📑 Processing uploaded report..."):
+            try:
+                file_content = file_upload.read()
+                if file_upload.name.endswith(".pdf"):
+                    reader = PyPDF2.PdfReader(io.BytesIO(file_content))
+                    text = "\n".join([p.extract_text() for p in reader.pages if p.extract_text()])
+                else:
+                    text = file_content.decode("utf-8")
+
+                analysis_prompt = f"Analyze the following company financial document and extract major insights, key metrics, and financial health summary:\n\n{text[:4000]}"
                 completion = client.chat.completions.create(
                     model="llama-3.1-8b-instant",
-                    messages=[{"role": "user", "content": prompt}],
-                    temperature=0.7,
-                    max_tokens=1024,  # Use max_tokens instead of max_completion_tokens (deprecated in newer Groq SDK)
-                    top_p=1
+                    messages=[{"role": "user", "content": analysis_prompt}],
+                    temperature=0.5,
+                    max_tokens=1024
                 )
                 report_text = completion.choices[0].message.content
                 st.session_state["report_text"] = report_text
-                st.success("✅ Analysis Completed Successfully!")
+                st.success("✅ File Analysis Done!")
                 st.markdown(report_text)
-            
-            elif file_upload:
-                # ✅ Handle file upload
-                file_content = file_upload.read()
-                file_extension = file_upload.name.split('.')[-1].lower()
-                
-                if file_extension == 'pdf':
-                    # Extract text from PDF
-                    try:
-                        pdf_reader = PyPDF2.PdfReader(io.BytesIO(file_content))
-                        extracted_text = ""
-                        for page in pdf_reader.pages:
-                            extracted_text += page.extract_text() + "\n"
-                        
-                        if not extracted_text.strip():
-                            st.error("❌ No text could be extracted from the PDF. It might be scanned or image-based.")
-                        else:
-                            # Analyze extracted text
-                            analysis_prompt = (
-                                f"Analyze the following financial report text and generate a detailed summary, "
-                                f"including key metrics like revenue, profit, expenses, market cap, etc. "
-                                f"Structure the output with sections like 'Key Metrics' (in markdown table) and 'Insights'. "
-                                f"Limit to the most important data.\n\n"
-                                f"Text: {extracted_text[:4000]}"  # Truncate for token limits; adjust as needed
-                            )
-                            completion = client.chat.completions.create(
-                                model="llama-3.1-8b-instant",
-                                messages=[{"role": "user", "content": analysis_prompt}],
-                                temperature=0.5,  # Lower for more factual extraction
-                                max_tokens=1024
-                            )
-                            report_text = completion.choices[0].message.content
-                            st.session_state["report_text"] = report_text
-                            st.success("✅ PDF Analysis Completed Successfully!")
-                            st.markdown(report_text)
-                    except Exception as e:
-                        st.error(f"❌ Error processing PDF: {str(e)}")
-                
-                elif file_extension == 'xbrl':
-                    # XBRL handling is more complex; basic text extraction for now
-                    # For full XBRL parsing, consider libraries like python-xbrl (not included here)
-                    st.warning("⚠️ XBRL support is basic. Extracting raw text for analysis.")
-                    try:
-                        # Treat XBRL as XML text
-                        extracted_text = file_content.decode('utf-8')
-                        analysis_prompt = (
-                            f"Parse this XBRL financial data and extract key metrics (e.g., revenue, net income, assets) "
-                            f"into a markdown table. Provide a summary of the financial health.\n\n"
-                            f"Data: {extracted_text[:4000]}"  # Truncate
-                        )
-                        completion = client.chat.completions.create(
-                            model="llama-3.1-8b-instant",
-                            messages=[{"role": "user", "content": analysis_prompt}],
-                            temperature=0.5,
-                            max_tokens=1024
-                        )
-                        report_text = completion.choices[0].message.content
-                        st.session_state["report_text"] = report_text
-                        st.success("✅ XBRL Analysis Completed Successfully!")
-                        st.markdown(report_text)
-                    except Exception as e:
-                        st.error(f"❌ Error processing XBRL: {str(e)}")
-                
-                else:
-                    st.error("❌ Unsupported file type. Please upload PDF or XBRL.")
+            except Exception as e:
+                st.error(f"❌ Error processing file: {e}")
 
-# --- TOOLS SECTION ---
+# ---------------- SMART TOOLS ---------------- #
+
 if "report_text" in st.session_state:
     st.divider()
     st.subheader("🧠 Smart Tools for Better Understanding")
 
-    # --- Improved Extract Structured Data for Dynamic Viz ---
     @st.cache_data
     def extract_metrics(report_text):
-        # Better prompt for reliable JSON output
         extract_prompt = (
-            f"You are a financial data extractor. From the following report, extract ONLY the values for: "
-            f"revenue (total annual revenue in Cr or billions), profit (net profit in Cr or billions), "
-            f"expenses (total expenses in Cr or billions), market_cap (in Cr or billions). "
-            f"If not mentioned, use 0. Output EXACTLY this JSON format, nothing else:\n"
-            f'{{"revenue": 12345, "profit": 1234, "expenses": 11111, "market_cap": 123456, "currency": "₹"}}\n\n'
-            f"Report: {report_text[:2000]}"  # Limit input for better focus
+            f"You are a financial data extractor. From the report below, extract ONLY:\n"
+            f"revenue, profit, expenses, and market_cap (in Cr or billions).\n"
+            f"Output JSON only:\n"
+            f'{{"revenue": 0, "profit": 0, "expenses": 0, "market_cap": 0, "currency": "₹"}}\n\n'
+            f"Report: {report_text[:2000]}"
         )
         try:
             completion = client.chat.completions.create(
                 model="llama-3.1-8b-instant",
                 messages=[
-                    {"role": "system", "content": "You output ONLY valid JSON. No explanations."},
-                    {"role": "user", "content": extract_prompt}
+                    {"role": "system", "content": "Output only valid JSON."},
+                    {"role": "user", "content": extract_prompt},
                 ],
-                temperature=0.0,  # Zero for deterministic output
-                max_tokens=150
+                temperature=0.0,
+                max_tokens=150,
             )
-            raw_output = completion.choices[0].message.content.strip()
-            
-            # Safe JSON parsing
-            if raw_output.startswith('```json'):
-                raw_output = raw_output.split('```json')[1].split('```')[0].strip()
-            elif raw_output.startswith('```'):
-                raw_output = raw_output.split('```')[1].strip()
-            
-            parsed = json.loads(raw_output)
-            # Ensure all keys exist
-            defaults = {"revenue": 0, "profit": 0, "expenses": 0, "market_cap": 0, "currency": "₹"}
-            defaults.update(parsed)
-            return defaults
-        except (json.JSONDecodeError, KeyError) as e:
-            st.error(f"⚠️ Extraction failed (details: {str(e)}). Using defaults.")
+            raw = completion.choices[0].message.content.strip()
+            if "```" in raw:
+                raw = re.sub(r"```(json)?", "", raw).strip()
+            return json.loads(raw)
+        except Exception:
             return {"revenue": 0, "profit": 0, "expenses": 0, "market_cap": 0, "currency": "₹"}
 
     metrics = extract_metrics(st.session_state["report_text"])
 
-    # --- New Visualize Button ---
     if st.button("📊 Visualize Data (Graphs, Charts, Piecharts)"):
-        # Dynamic DataFrame from extracted metrics
         df = pd.DataFrame({
             "Parameter": ["Revenue", "Profit", "Expenses", "Market Cap"],
             "Value": [metrics["revenue"], metrics["profit"], metrics["expenses"], metrics["market_cap"]]
         })
-        df["Value"] = df["Value"].apply(lambda x: f"{x} {metrics['currency']} Cr" if x > 0 else "N/A")
+        st.bar_chart(df.set_index("Parameter"))
+        st.line_chart(df.set_index("Parameter"))
+        fig, ax = plt.subplots()
+        ax.pie(df["Value"], labels=df["Parameter"], autopct='%1.1f%%')
+        st.pyplot(fig)
 
-        st.markdown("### 📉 Bar Chart")
-        viz_df = df.set_index("Parameter")["Value"].str.replace(f" {metrics['currency']} Cr", "").astype(float)
-        if viz_df.sum() > 0:
-            st.bar_chart(viz_df)
-        else:
-            st.warning("⚠️ No numerical data for charts. Try a different report.")
-
-        st.markdown("### 📈 Line Chart")
-        if viz_df.sum() > 0:
-            st.line_chart(viz_df)
-        else:
-            st.warning("⚠️ No numerical data for charts. Try a different report.")
-
-        st.markdown("### 🥧 Pie Chart")
-        positive_values = viz_df[viz_df > 0]
-        if len(positive_values) > 1:  # Need at least 2 for pie
-            fig, ax = plt.subplots()
-            ax.pie(positive_values, labels=positive_values.index, autopct='%1.1f%%', startangle=90)
-            ax.axis("equal")
-            st.pyplot(fig)
-        else:
-            st.warning("⚠️ Insufficient data for pie chart (need at least 2 positive values).")
-
-    # --- Two Buttons (Summary + Table) ---
-    col1, col2 = st.columns(2)
-
-    # 1️⃣ Auto Summary
-    with col1:
+    colA, colB = st.columns(2)
+    with colA:
         if st.button("📝 Auto Summarize"):
-            with st.spinner("Summarizing report..."):
-                summary_prompt = (
-                    f"Summarize the following financial report in 5 short bullet points:\n\n"
-                    f"{st.session_state['report_text']}"
-                )
+            with st.spinner("Summarizing..."):
+                summary_prompt = f"Summarize this financial analysis in 5 short bullet points:\n\n{st.session_state['report_text']}"
                 completion = client.chat.completions.create(
                     model="llama-3.1-8b-instant",
                     messages=[{"role": "user", "content": summary_prompt}],
-                    temperature=0.7,
+                    temperature=0.6,
                     max_tokens=300
                 )
-                summary = completion.choices[0].message.content
                 st.markdown("### 📋 Summary")
-                st.markdown(summary)
+                st.markdown(completion.choices[0].message.content)
 
-    # 2️⃣ Show Table
-    with col2:
+    with colB:
         if st.button("📋 Show Table"):
-            # Dynamic table from metrics
-            table_df = pd.DataFrame({
+            table = pd.DataFrame({
                 "Parameter": ["Revenue", "Profit", "Expenses", "Market Cap"],
                 "Value": [
-                    f"{metrics['revenue']} {metrics['currency']} Cr" if metrics['revenue'] > 0 else "N/A",
-                    f"{metrics['profit']} {metrics['currency']} Cr" if metrics['profit'] > 0 else "N/A",
-                    f"{metrics['expenses']} {metrics['currency']} Cr" if metrics['expenses'] > 0 else "N/A",
-                    f"{metrics['market_cap']} {metrics['currency']} Cr" if metrics['market_cap'] > 0 else "N/A"
+                    f"{metrics['revenue']} {metrics['currency']} Cr" if metrics['revenue'] else "N/A",
+                    f"{metrics['profit']} {metrics['currency']} Cr" if metrics['profit'] else "N/A",
+                    f"{metrics['expenses']} {metrics['currency']} Cr" if metrics['expenses'] else "N/A",
+                    f"{metrics['market_cap']} {metrics['currency']} Cr" if metrics['market_cap'] else "N/A"
                 ]
             })
             st.markdown("### 🧾 Financial Table")
-            st.table(table_df)
+            st.table(table)
