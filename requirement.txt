@@ -8,3 +8,4 @@ groq
 python-dotenv
 pandas
 matplotlib
+PyPDF2
