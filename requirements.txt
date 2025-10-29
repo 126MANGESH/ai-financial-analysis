@@ -1,0 +1,13 @@
+streamlit
+groq
+python-dotenv
+pandas
+matplotlib
+streamlit
+groq
+python-dotenv
+pandas
+matplotlib
+PyPDF2
+flask
+python-dotenv
