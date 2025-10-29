@@ -1,0 +1,744 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>SageAlpha AI</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+      color: #ffffff;
+      min-height: 100vh;
+    }
+
+    /* ==================== NAVBAR ==================== */
+    .navbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 40px;
+      background: rgba(15, 23, 42, 0.8);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .navbar-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 24px;
+      font-weight: 700;
+      color: #a78bfa;
+    }
+
+    .navbar-center {
+      flex: 1;
+      max-width: 500px;
+      margin: 0 40px;
+    }
+
+    .search-box {
+      display: flex;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      border-radius: 25px;
+      padding: 10px 16px;
+      transition: all 0.3s;
+    }
+
+    .search-box:focus-within {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: #a78bfa;
+      box-shadow: 0 0 15px rgba(167, 139, 250, 0.3);
+    }
+
+    .search-box input {
+      flex: 1;
+      background: none;
+      border: none;
+      color: white;
+      padding: 0 10px;
+      font-size: 14px;
+      outline: none;
+    }
+
+    .search-box input::placeholder {
+      color: rgba(255, 255, 255, 0.5);
+    }
+
+    .search-icon {
+      cursor: pointer;
+      color: #a78bfa;
+      font-size: 16px;
+    }
+
+    .navbar-right {
+      display: flex;
+      align-items: center;
+      gap: 25px;
+    }
+
+    .profile-section {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      cursor: pointer;
+      padding: 8px 12px;
+      border-radius: 20px;
+      transition: background 0.3s;
+    }
+
+    .profile-section:hover {
+      background: rgba(255, 255, 255, 0.1);
+    }
+
+    .profile-icon {
+      width: 32px;
+      height: 32px;
+      background: linear-gradient(135deg, #a78bfa, #7c3aed);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+    }
+
+    /* ==================== MAIN CHAT CONTAINER ==================== */
+    .main-container {
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      padding: 40px 20px;
+      min-height: calc(100vh - 70px);
+    }
+
+    .chat-box {
+      width: 100%;
+      max-width: 900px;
+      background: linear-gradient(135deg, rgba(255, 255, 255, 0.05) 0%, rgba(167, 139, 250, 0.05) 100%);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 0;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      max-height: 90vh;
+    }
+
+    /* Header with search and controls */
+    .chat-header {
+      background: linear-gradient(90deg, rgba(0, 0, 0, 0.5) 0%, rgba(0, 0, 0, 0.3) 100%);
+      border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+      padding: 16px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .chat-header-left {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chat-input-small {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: white;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .chat-input-small::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .chat-header-right {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .header-btn {
+      background: none;
+      border: none;
+      color: white;
+      font-size: 18px;
+      cursor: pointer;
+      opacity: 0.7;
+      transition: opacity 0.3s;
+    }
+
+    .header-btn:hover {
+      opacity: 1;
+    }
+
+    /* Main content area */
+    .chat-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 30px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+    }
+
+    .chat-content::-webkit-scrollbar {
+      width: 8px;
+    }
+
+    .chat-content::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 10px;
+    }
+
+    .chat-content::-webkit-scrollbar-thumb {
+      background: rgba(167, 139, 250, 0.4);
+      border-radius: 10px;
+    }
+
+    /* Welcome message */
+    .welcome-message {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .welcome-message h2 {
+      font-size: 32px;
+      font-weight: 600;
+      background: linear-gradient(135deg, #ffffff 0%, #a78bfa 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 15px;
+    }
+
+    .welcome-message p {
+      color: rgba(255, 255, 255, 0.7);
+      font-size: 16px;
+    }
+
+    /* Sample questions */
+    .samples-section {
+      width: 100%;
+    }
+
+    .sample-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .sample-question {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.9);
+      line-height: 1.5;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .sample-question::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(167, 139, 250, 0.3), transparent);
+      transition: left 0.5s;
+    }
+
+    .sample-question:hover::before {
+      left: 100%;
+    }
+
+    .sample-question:hover {
+      background: rgba(167, 139, 250, 0.15);
+      border-color: #a78bfa;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(167, 139, 250, 0.2);
+    }
+
+    /* Document info */
+    .doc-info {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .doc-text {
+      flex: 1;
+      font-size: 14px;
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .info-icon {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      border: 2px solid #a78bfa;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #a78bfa;
+      font-size: 12px;
+      font-weight: bold;
+      flex-shrink: 0;
+      cursor: help;
+    }
+
+    /* Chat input section */
+    .chat-input-section {
+      padding: 20px 40px 30px;
+      background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.2) 100%);
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .input-wrapper {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      margin-bottom: 15px;
+    }
+
+    .input-field-large {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 12px;
+      padding: 12px 16px;
+      color: white;
+      font-size: 14px;
+      outline: none;
+      resize: vertical;
+      min-height: 45px;
+      max-height: 120px;
+      font-family: inherit;
+      transition: all 0.3s;
+    }
+
+    .input-field-large:focus {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: #a78bfa;
+      box-shadow: 0 0 15px rgba(167, 139, 250, 0.2);
+    }
+
+    .input-field-large::placeholder {
+      color: rgba(255, 255, 255, 0.4);
+    }
+
+    .ai-button-submit {
+      background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+      border: none;
+      color: white;
+      padding: 12px 28px;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .ai-button-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(167, 139, 250, 0.4);
+    }
+
+    .ai-button-submit:active {
+      transform: translateY(0);
+    }
+
+    /* Model selector */
+    .model-selector {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .model-option {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 13px;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+
+    .model-option:hover {
+      background: rgba(167, 139, 250, 0.15);
+      border-color: #a78bfa;
+    }
+
+    .model-option.active {
+      background: linear-gradient(135deg, #a78bfa 0%, #7c3aed 100%);
+      border-color: #a78bfa;
+      color: white;
+    }
+
+    .arrow-icon {
+      font-size: 11px;
+    }
+
+    /* Response message */
+    .response-message {
+      background: rgba(167, 139, 250, 0.1);
+      border: 1px solid rgba(167, 139, 250, 0.3);
+      border-radius: 12px;
+      padding: 16px;
+      color: rgba(255, 255, 255, 0.95);
+      line-height: 1.6;
+      animation: slideIn 0.3s ease;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .loading {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .loading-dot {
+      width: 8px;
+      height: 8px;
+      background: #a78bfa;
+      border-radius: 50%;
+      animation: pulse 1.4s ease-in-out infinite;
+    }
+
+    .loading-dot:nth-child(2) {
+      animation-delay: 0.2s;
+    }
+
+    .loading-dot:nth-child(3) {
+      animation-delay: 0.4s;
+    }
+
+    @keyframes pulse {
+      0%, 80%, 100% {
+        opacity: 0.3;
+      }
+      40% {
+        opacity: 1;
+      }
+    }
+
+    /* Responsive design */
+    @media (max-width: 768px) {
+      .navbar {
+        padding: 12px 20px;
+        flex-wrap: wrap;
+        gap: 15px;
+      }
+
+      .navbar-center {
+        margin: 0 20px;
+        order: 3;
+        flex-basis: 100%;
+        max-width: 100%;
+      }
+
+      .sample-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .chat-content {
+        padding: 20px;
+      }
+
+      .chat-input-section {
+        padding: 15px 20px 20px;
+      }
+
+      .chat-header {
+        flex-wrap: wrap;
+      }
+
+      .chat-header-left {
+        flex-basis: 100%;
+        margin-bottom: 10px;
+      }
+
+      .welcome-message h2 {
+        font-size: 24px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .navbar {
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .sample-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .model-selector {
+        flex-direction: column;
+      }
+
+      .model-option {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .input-wrapper {
+        flex-direction: column;
+      }
+
+      .ai-button-submit {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <!-- NAVBAR -->
+  <nav class="navbar">
+    <div class="navbar-left">
+       SageAlpha
+    </div>
+    <!-- <div class="navbar-center">
+      <div class="search-box">
+        <input type="text" id="navSearch" placeholder="Search for company analysis...">
+        <span class="search-icon">🔍</span>
+      </div> -->
+    </div>
+    <div class="navbar-right">
+      <div class="profile-section">
+        <div class="profile-icon">👤</div>
+        <span>▼</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- MAIN CONTAINER -->
+  <div class="main-container">
+    <div class="chat-box">
+      <!-- Chat Header -->
+      <div class="chat-header">
+        <div class="chat-header-left">
+          <input type="text" class="chat-input-small" id="companyInput" placeholder="🏢 Company Name"><span class="search-icon">🔍</span>
+        </div>
+        <div class="chat-header-right">
+          <!-- <button class="header-btn" title="Edit">✏️</button>
+          <button class="header-btn" title="Close">✕</button> -->
+        </div>
+      </div>
+
+      <!-- Chat Content -->
+      <div class="chat-content">
+        <!-- Welcome Message -->
+        <div class="welcome-message">
+  <h2><span class="hello">Hello,</span></h2>
+  <h2><span class="hello">How can I help you with this stock?</span></h2>
+  <p>Ask me anything about company analysis.</p>
+</div>
+
+        <!-- Sample Questions -->
+        <div class="samples-section">
+          <div class="sample-grid">
+            <div class="sample-question" onclick="setSampleQuery(this)">What is the business model of the company?</div>
+            <div class="sample-question" onclick="setSampleQuery(this)">What has the company been focusing on over last 3 years?</div>
+            <div class="sample-question" onclick="setSampleQuery(this)">Explain the business model of the company?</div>
+            <div class="sample-question" onclick="setSampleQuery(this)">What are the red flags in the company?</div>
+            <div class="sample-question" onclick="setSampleQuery(this)">Evolution of the company over last 3 years</div>
+            <div class="sample-question" onclick="setSampleQuery(this)">Growth outlook for next 3 years</div>
+            <div class="sample-question" onclick="setSampleQuery(this)">What is the management's recent commentary?</div>
+            <div class="sample-question" onclick="setSampleQuery(this)">Create a table of key products</div>
+          </div>
+        </div>
+
+        <!-- Document Info -->
+
+        
+
+       <!-- <div class="doc-info-text">
+  <p>AI has access to <span class="doc-count" id="docCount">156</span> documents of the company <span class="info-icon">i</span></p>
+</div> -->
+        
+
+      
+
+
+      <!-- Chat Input Section -->
+      <div class="chat-input-section">
+        <div class="input-wrapper">
+          <textarea class="input-field-large" id="queryInput" placeholder="Ask anything..."></textarea>
+          <button class="ai-button-submit" id="submitBtn">
+            <span></span> SageAlpha AI
+          </button>
+        </div>
+
+        <!-- Model Selector -->
+        <div class="model-selector">
+          <div class="model-option active" onclick="selectModel(this, 'smart')">
+            ✨ Smart + Intelligence
+            <span class="arrow-icon">▼ Free</span>
+          </div>
+          
+          <div class="model-option" onclick="selectModel(this, 'expert')">
+            💎 Expert Intelligence
+            <span class="arrow-icon">▲ <b>₹</b></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let selectedModel = 'smart';
+    let currentCompany = '';
+    let currentDocCount = 281;
+
+    // Set sample query
+    function setSampleQuery(element) {
+      document.getElementById('queryInput').value = element.textContent;
+      document.getElementById('queryInput').focus();
+    }
+
+    // Select model
+    function selectModel(element, model) {
+      document.querySelectorAll('.model-option').forEach(el => el.classList.remove('active'));
+      element.classList.add('active');
+      selectedModel = model;
+      
+      if (model === 'expert') {
+        alert('Expert Model - ₹ subscription required');
+      }
+    }
+
+    // Handle company name change
+    document.getElementById('companyInput').addEventListener('input', (e) => {
+      currentCompany = e.target.value;
+      // Generate random document count between 100-400
+      if (currentCompany.length > 0) {
+        currentDocCount = Math.floor(Math.random() * 300) + 100;
+        document.getElementById('docCount').textContent = currentDocCount;
+      }
+    });
+
+    // Handle query submission
+    document.getElementById('submitBtn').addEventListener('click', async () => {
+      const query = document.getElementById('queryInput').value.trim();
+      const company = document.getElementById('companyInput').value.trim();
+
+      if (!query) {
+        alert('Please enter a question');
+        return;
+      }
+
+      if (!company) {
+        alert('Please enter a company name');
+        return;
+      }
+
+      // Show loading state
+      const submitBtn = document.getElementById('submitBtn');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span class="loading"><span class="loading-dot"></span><span class="loading-dot"></span><span class="loading-dot"></span></span>';
+
+      try {
+        // Send to backend
+        const response = await fetch('/api/analyze', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            company_name: company,
+            query: query,
+            model: selectedModel
+          })
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          // Display response
+          const responseDiv = document.createElement('div');
+          responseDiv.className = 'response-message';
+          responseDiv.innerHTML = data.response.replace(/\n/g, '<br>');
+          document.querySelector('.chat-content').appendChild(responseDiv);
+          
+          // Scroll to bottom
+          document.querySelector('.chat-content').scrollTop = document.querySelector('.chat-content').scrollHeight;
+          
+          // Clear input
+          document.getElementById('queryInput').value = '';
+        } else {
+          alert('Error: ' + data.error);
+        }
+      } catch (error) {
+        alert('Connection error: ' + error.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<span>🚀</span> SageAlpha AI';
+      }
+    });
+
+    // Allow Enter to submit
+    document.getElementById('queryInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && e.ctrlKey) {
+        document.getElementById('submitBtn').click();
+      }
+    });
+
+    // Navbar search
+    document.getElementById('navSearch').addEventListener('focus', () => {
+      document.getElementById('companyInput').focus();
+    });
+  </script>
+</body>
+</html>
